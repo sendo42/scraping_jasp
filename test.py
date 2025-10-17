@@ -32,7 +32,7 @@ element.click()
 print("iframe 内の要素をクリックしました！")
 
 # --- fileinput をクリックしたあとで ---
-time.sleep(4)  # DOM更新待ち
+# time.sleep(4)  # DOM更新待ち
 
 select_box = WebDriverWait(driver, 30).until(
     EC.element_to_be_clickable((By.XPATH, "/html/body/div[3]/div/section/div/div/div[2]/div/div[1]/form/div/div/div[1]/div[1]/div/div/div/div[1]"))
@@ -49,10 +49,6 @@ print(target)
 file_option = WebDriverWait(driver, 10).until(
     EC.element_to_be_clickable((By.XPATH, "//div[@data-value='fileinput']"))
 )
-
-# --- HTML確認（デバッグ用） ---
-html_snippet = driver.execute_script("return arguments[0].outerHTML;", file_option)
-print("🎯 クリック対象のHTML:\n", html_snippet)
 
 # --- JSでクリック ---
 driver.execute_script("arguments[0].scrollIntoView(true);", file_option)
@@ -73,18 +69,48 @@ next_btn = WebDriverWait(driver, 60).until(
 next_btn.click()
 print("次へボタンをクリックしました！")
 
-file_input = WebDriverWait(driver, 20).until(
-    EC.presence_of_element_located((By.ID, "file1"))
+
+
+file_input = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "file1")))
+attached = driver.execute_script("return arguments[0].files.length;", file_input)
+print(f"📎 DOM上で認識されたファイル数: {attached}")
+
+file_input.send_keys("/Users/labo/Downloads/test.csv")
+print("📂 ファイル送信済み")
+
+driver.execute_script("""
+var input = arguments[0];
+var evt = new Event('change', { bubbles: true });
+input.dispatchEvent(evt);
+""", file_input)
+print("✅ change イベント発火完了")
+
+attached = driver.execute_script("return arguments[0].files.length;", file_input)
+print(f"📎 DOM上で認識されたファイル数: {attached}")
+
+time.sleep(3)
+
+execution = WebDriverWait(driver, 60).until(
+    EC.element_to_be_clickable((By.ID, "do"))
 )
 
-# --- デバッグ: outerHTML を表示して、確かに取得できているか確認 ---
-html_snippet = driver.execute_script("return arguments[0].outerHTML;", file_input)
-print("🎯 file1 要素を検出:\n", html_snippet[:300])
+execution.click()
 
 
-# --- ファイルを送信（絶対パスで） ---
-file_input.send_keys("/Users/labo/Downloads/zzSCUSDT.csv")
-print("📂 ファイルアップロード完了")
+run = WebDriverWait(driver, 60).until(
+    EC.element_to_be_clickable((By.ID, "run1"))
+)
+
+run.click()
+
+time.sleep(5)
+
+downloadPDF = WebDriverWait(driver, 60).until(
+    EC.element_to_be_clickable((By.ID, "downloadPDF1"))
+)
+
+downloadPDF.click()
+
 
 time.sleep(20)
 
