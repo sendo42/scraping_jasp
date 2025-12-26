@@ -7,7 +7,7 @@ import os
 import glob
 
 
-def wait_and_click(driver, xpath, timeout=60):
+def wait_and_click(driver, xpath, timeout=300):
     element = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
     element.click()
     return element
@@ -55,7 +55,7 @@ def upload_csv(driver, file_path, is_first_run=True):
     wait_and_click(driver, "//*[@id='do']")
     print(f"ファイル {os.path.basename(file_path)} の読み込み完了")
 
-def set_decomp_parameters(driver, period="11", trend="3", seasonal="2", ar="2"):
+def set_decomp_parameters(driver, period="12", trend="2", seasonal="1", ar="2"):
     """Decompタブ内の各種パラメータ設定"""
     # 周期
     period_input = wait_and_click(driver, "//*[@id='period1-selectized']")
@@ -64,7 +64,7 @@ def set_decomp_parameters(driver, period="11", trend="3", seasonal="2", ar="2"):
     period_input.send_keys(Keys.ENTER)
     
     # 対数変換 (TRUE)
-    wait_and_click(driver, "//input[@name='log' and @value='TRUE']")
+    # wait_and_click(driver, "//input[@name='log' and @value='TRUE']")
     
     # 各種次数
     overwrite_input(driver, "trend.order", trend)
@@ -72,7 +72,7 @@ def set_decomp_parameters(driver, period="11", trend="3", seasonal="2", ar="2"):
     overwrite_input(driver, "ar.order", ar)
     
     # 曜日効果 (TRUE)
-    wait_and_click(driver, "//input[@name='trade' and @value='TRUE']")
+    # wait_and_click(driver, "//input[@name='trade' and @value='TRUE']")
     
     # 実行
     wait_and_click(driver, "//*[@id='run1']")
@@ -83,6 +83,71 @@ def select_data_input_by_index(driver):
     # タブ切り替え
     wait_and_click(driver, "//a[@data-value='データ入力']")
     time.sleep(2)
+
+def download_csv_from_table(driver, output_dir, new_name):
+    """
+    出力データタブ内のCSVダウンロードボタンを押し、指定した名前にリネームする
+    StaleElementReferenceException 対策済み
+    """
+    # 1. 「出力データ」タブをクリックして移動（もし移動していなければ）
+    print("📂 '出力データ' タブに切り替えています...")
+    wait_and_click(driver, "//a[@data-value='出力データ']")
+    time.sleep(3) # タブ切り替え後の描画待ち
+
+    # 2. ダウンロード前のCSVファイルリストを取得
+    before_files = set(glob.glob(os.path.join(output_dir, "*.csv")))
+
+    # 3. CSVダウンロードボタンをクリック (再試行付き)
+    xpath = "//button[contains(@class, 'buttons-csv')]"
+    print("⏳ CSVダウンロードボタンを探索中...")
+    
+    success = False
+    for i in range(3): # 最大3回再試行
+        try:
+            # 要素が現れるのを待つ
+            WebDriverWait(driver, 180).until(EC.presence_of_element_located((By.XPATH, xpath)))
+            csv_buttons = driver.find_elements(By.XPATH, xpath)
+            
+            if csv_buttons:
+                target_button = csv_buttons[-1]
+                # JSでクリック（これ自体がStale対策にもなる）
+                driver.execute_script("arguments[0].click();", target_button)
+                success = True
+                break
+        except Exception as e:
+            print(f"⚠️ 試行 {i+1} 回目: 要素が不安定です。再試行します... ({e})")
+            time.sleep(2)
+            continue
+
+    if not success:
+        print("❌ CSVダウンロードボタンのクリックに失敗しました")
+        return
+
+    # 4. ファイルが出現するまで待機（最大180秒）
+    print(f"📥 {new_name} をダウンロード中...")
+    timeout = 180
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        time.sleep(2)
+        after_files = set(glob.glob(os.path.join(output_dir, "*.csv")))
+        new_files = after_files - before_files
+        
+        if new_files:
+            downloaded_file = list(new_files)[0]
+            if not downloaded_file.endswith('.crdownload'):
+                time.sleep(1)
+                final_path = os.path.join(output_dir, new_name)
+                if os.path.exists(final_path):
+                    os.remove(final_path)
+                os.rename(downloaded_file, final_path)
+                print(f"✅ CSV保存完了: {new_name}")
+                return
+                
+    print(f"❌ {new_name} の保存がタイムアウトしました")
+
+
+
 
 def select_other_method_by_index(driver, index, methods_list):
     """その他の手法タブへ切り替えて手法を選択"""

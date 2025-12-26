@@ -21,21 +21,21 @@ def main():
     is_first_file = True
 
     try:
-        # inputディレクトリ内の全CSVを取得
         csv_files = [f for f in os.listdir(config.INPUT_DIR) if f.endswith('.csv')]
         
         if not csv_files:
             print("処理対象のCSVファイルが見つかりません。")
             return
 
-        # ページ初期化
         jasp.setup_jasp_page(driver)
 
         for filename in csv_files:
             file_path = os.path.join(config.INPUT_DIR, filename)
-            # 拡張子を除いた名前を作成 (aiueo.csv -> aiueo.pdf)
             base_name = os.path.splitext(filename)[0]
+            
+            # --- 保存名の定義 ---
             pdf_name = f"{base_name}.pdf"
+            target_csv_name = f"{base_name}.csv" # ここを定義
             
             print(f"\n======== 処理開始: {filename} ========")
             
@@ -52,6 +52,9 @@ def main():
             # --- PDF ダウンロードとリネーム ---
             # 引数に OUTPUT_DIR と 新しい名前を渡す
             jasp.download_pdf(driver, config.OUTPUT_DIR, pdf_name)
+            jasp.download_csv_from_table(driver, config.OUTPUT_DIR, target_csv_name)
+
+
 
             # 手法ループを使う場合も同様
             # for i, m_name in enumerate(config.METHODS):
