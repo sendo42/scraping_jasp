@@ -3,6 +3,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
+import os
+import glob
+
 
 def wait_and_click(driver, xpath, timeout=60):
     element = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
@@ -41,6 +44,7 @@ def upload_csv(driver, file_path, is_first_run=True):
         wait_and_click(driver, "//*[@id='dataApply']")
     else:
         print("2回目以降：モード設定をスキップしてファイルを直接送信します")
+
     file_input = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.ID, "file1"))
     )
@@ -102,7 +106,42 @@ def select_other_method_by_index(driver, index, methods_list):
     wait_and_click(driver, "//*[@id='run2']")
     time.sleep(3)
 
-def download_pdf(driver):
-    """PDFダウンロードボタンのクリック"""
+def download_pdf(driver, output_dir, new_name):
+    """
+    PDFをダウンロードし、指定した名前にリネームする
+    new_name: リネーム後の名前 (例: 'test.pdf')
+    """
+    # 1. ダウンロード前のフォルダ内のファイルリストを取得
+    before_files = set(glob.glob(os.path.join(output_dir, "*.pdf")))
+
+    # 2. ダウンロードボタンをクリック
     wait_and_click(driver, "//*[@id='downloadPDF1']")
-    time.sleep(5) # ダウンロード完了待ち
+    
+    # 3. ファイルが出現するまで待機（最大30秒）
+    print(f"📥 {new_name} をダウンロード中...")
+    timeout = 30
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        time.sleep(1)
+        after_files = set(glob.glob(os.path.join(output_dir, "*.pdf")))
+        new_files = after_files - before_files
+        
+        if new_files:
+            # 新しく増えたファイル（RSDxxx.pdf）を特定
+            downloaded_file = list(new_files)[0]
+            
+            # .crdownload (Chromeのダウンロード中一時ファイル) でないことを確認
+            if not downloaded_file.endswith('.crdownload'):
+                # リネーム実行
+                final_path = os.path.join(output_dir, new_name)
+                
+                # 同名のファイルが既にある場合は削除（上書き）
+                if os.path.exists(final_path):
+                    os.remove(final_path)
+                    
+                os.rename(downloaded_file, final_path)
+                print(f"✅ 保存完了: {new_name}")
+                return
+                
+    print(f"❌ {new_name} のダウンロードがタイムアウトしました")

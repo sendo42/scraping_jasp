@@ -1,3 +1,13 @@
+# 動かし方
+
+
+
+source venv/bin/activate
+で仮想環境起動
+
+python3 main.py
+でコマンド打つだけ
+
 # やること
 
 1,一通り動くようにする

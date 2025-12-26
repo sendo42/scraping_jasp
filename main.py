@@ -33,6 +33,10 @@ def main():
 
         for filename in csv_files:
             file_path = os.path.join(config.INPUT_DIR, filename)
+            # 拡張子を除いた名前を作成 (aiueo.csv -> aiueo.pdf)
+            base_name = os.path.splitext(filename)[0]
+            pdf_name = f"{base_name}.pdf"
+            
             print(f"\n======== 処理開始: {filename} ========")
             
             # データ入力タブへ移動
@@ -45,15 +49,16 @@ def main():
             # Decomp設定と実行
             jasp.set_decomp_parameters(driver)
             
-            # PDF ダウンロード
-            jasp.download_pdf(driver)
+            # --- PDF ダウンロードとリネーム ---
+            # 引数に OUTPUT_DIR と 新しい名前を渡す
+            jasp.download_pdf(driver, config.OUTPUT_DIR, pdf_name)
 
-            # その他の手法を順番に実行（例: 0〜7まで全部やる場合）
-            # for i in range(len(config.METHODS)):
-            #     print(f"解析手法実行中: {config.METHODS[i]}")
+            # 手法ループを使う場合も同様
+            # for i, m_name in enumerate(config.METHODS):
             #     jasp.select_other_method_by_index(driver, i, config.METHODS)
-            #     jasp.download_pdf(driver)
-                
+            #     # 例: test_arfit.pdf のように保存
+            #     jasp.download_pdf(driver, config.OUTPUT_DIR, f"{base_name}_{m_name}.pdf")
+
             print(f"完了: {filename}")
 
     except Exception as e:
