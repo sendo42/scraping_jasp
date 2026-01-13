@@ -69,7 +69,7 @@ def main():
     
     except Exception as e:
         print(f"予期せぬエラーが発生しました: {e}")
-        print(f"処理したファイルの数： " + count)
+        print(f"処理したファイルの数： {count}")
         end = time.time()
         elapsed = end - start
 
@@ -99,6 +99,10 @@ if __name__ == "__main__":
 
         if remaining_after == remaining_before:
             # 進捗が進んでいない = 異常
+
+            notify.notify_discord(
+                f"進捗が更新されていません。院生室のWifiはついてますが、サーバー側に問題があるかもしれません。"
+            )
             raise RuntimeError(
                 "進捗が更新されていません。無限ループ防止のため停止します。"
             )
