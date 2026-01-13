@@ -27,10 +27,10 @@ def setup_jasp_page(driver):
     driver.switch_to.frame(iframe)
     wait_and_click(driver, "//*[@id='page_menu']/li[2]/a")
 
-def upload_csv(driver, file_path, is_first_run=True):
+def upload_csv(driver, file_path, count):
     """CSVの読込設定とアップロード。2回目以降はモード選択をスキップする。"""
     
-    if is_first_run:
+    if count % 30 == 0:
         print("初回実行：ファイル読込モードを設定します")
         wait_and_click(driver, "//div[contains(@class, 'selectize-input')]")
         time.sleep(1)
