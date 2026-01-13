@@ -30,7 +30,7 @@ def setup_jasp_page(driver):
 def upload_csv(driver, file_path, count):
     """CSVの読込設定とアップロード。2回目以降はモード選択をスキップする。"""
     
-    if count % 30 == 0:
+    if count == 0:
         print("初回実行：ファイル読込モードを設定します")
         wait_and_click(driver, "//div[contains(@class, 'selectize-input')]")
         time.sleep(1)

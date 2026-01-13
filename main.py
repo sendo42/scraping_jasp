@@ -46,7 +46,7 @@ def main():
             target_csv_name = f"{base_name}.csv" # ここを定義
 
             print(f"\n======== 処理開始: {filename} ========")
-            if count % 30 == 0:
+            if count == 0:
                 jasp.setup_jasp_page(driver)
             
             # データ入力タブへ移動
@@ -62,12 +62,6 @@ def main():
             # 引数に OUTPUT_DIR と 新しい名前を渡す
             jasp.download_pdf(driver, config.OUTPUT_DIR, pdf_name)
             jasp.download_csv_from_table(driver, config.OUTPUT_DIR, target_csv_name)
-
-            # 手法ループを使う場合も同様
-            # for i, m_name in enumerate(config.METHODS):
-            #     jasp.select_other_method_by_index(driver, i, config.METHODS)
-            #     # 例: test_arfit.pdf のように保存
-            #     jasp.download_pdf(driver, config.OUTPUT_DIR, f"{base_name}_{m_name}.pdf")
 
             print(f"完了: {filename}")
             progress.save_progress(progress_file, filename)
@@ -90,4 +84,22 @@ def main():
         driver.quit()
 
 if __name__ == "__main__":
-    main()
+    while True:
+        remaining_before = progress.count_remaining_files()
+
+        if remaining_before == 0:
+            print("✅ すべての CSV を処理しました。終了します。")
+            break
+
+        print(f"🔁 残り {remaining_before} 件。新しいブラウザで処理を開始します。")
+
+        main()  # ← 1回の main は「少数（例: 1〜30件）」だけ処理する
+
+        remaining_after = progress.count_remaining_files()
+
+        if remaining_after == remaining_before:
+            # 進捗が進んでいない = 異常
+            raise RuntimeError(
+                "進捗が更新されていません。無限ループ防止のため停止します。"
+            )
+
