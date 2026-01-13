@@ -7,6 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 import config
 import jasp_operations as jasp
+import discord_notify as notify
 
 def main():
     if not os.path.exists(config.OUTPUT_DIR):
@@ -20,6 +21,8 @@ def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
     is_first_file = True
 
+    count = 0
+    start = time.time()
     try:
         csv_files = [f for f in os.listdir(config.INPUT_DIR) if f.endswith('.csv')]
         
@@ -27,45 +30,56 @@ def main():
             print("処理対象のCSVファイルが見つかりません。")
             return
 
-        jasp.setup_jasp_page(driver)
 
         for filename in csv_files:
-            file_path = os.path.join(config.INPUT_DIR, filename)
-            base_name = os.path.splitext(filename)[0]
+            jasp.setup_jasp_page(driver)
             
-            # --- 保存名の定義 ---
-            pdf_name = f"{base_name}.pdf"
-            target_csv_name = f"{base_name}.csv" # ここを定義
-            
-            print(f"\n======== 処理開始: {filename} ========")
-            
-            # データ入力タブへ移動
-            jasp.select_data_input_by_index(driver)
+            while count < 30:
+                file_path = os.path.join(config.INPUT_DIR, filename)
+                base_name = os.path.splitext(filename)[0]
+                
+                # --- 保存名の定義 ---
+                pdf_name = f"{base_name}.pdf"
+                target_csv_name = f"{base_name}.csv" # ここを定義
+                
+                print(f"\n======== 処理開始: {filename} ========")
+                
+                # データ入力タブへ移動
+                jasp.select_data_input_by_index(driver)
+    
+                # アップロード
+                jasp.upload_csv(driver, file_path, is_first_run=is_first_file)
+                is_first_file = False
+                
+                # Decomp設定と実行
+                jasp.set_decomp_parameters(driver)
+                
+                # --- PDF ダウンロードとリネーム ---
+                # 引数に OUTPUT_DIR と 新しい名前を渡す
+                jasp.download_pdf(driver, config.OUTPUT_DIR, pdf_name)
+                jasp.download_csv_from_table(driver, config.OUTPUT_DIR, target_csv_name)
 
-            # アップロード
-            jasp.upload_csv(driver, file_path, is_first_run=is_first_file)
-            is_first_file = False
-            
-            # Decomp設定と実行
-            jasp.set_decomp_parameters(driver)
-            
-            # --- PDF ダウンロードとリネーム ---
-            # 引数に OUTPUT_DIR と 新しい名前を渡す
-            jasp.download_pdf(driver, config.OUTPUT_DIR, pdf_name)
-            jasp.download_csv_from_table(driver, config.OUTPUT_DIR, target_csv_name)
 
 
-
-            # 手法ループを使う場合も同様
-            # for i, m_name in enumerate(config.METHODS):
-            #     jasp.select_other_method_by_index(driver, i, config.METHODS)
-            #     # 例: test_arfit.pdf のように保存
-            #     jasp.download_pdf(driver, config.OUTPUT_DIR, f"{base_name}_{m_name}.pdf")
-
-            print(f"完了: {filename}")
-
+                # 手法ループを使う場合も同様
+                # for i, m_name in enumerate(config.METHODS):
+                #     jasp.select_other_method_by_index(driver, i, config.METHODS)
+                #     # 例: test_arfit.pdf のように保存
+                #     jasp.download_pdf(driver, config.OUTPUT_DIR, f"{base_name}_{m_name}.pdf")
+    
+                print(f"完了: {filename}")
+                count += 1
+    
     except Exception as e:
         print(f"予期せぬエラーが発生しました: {e}")
+        print(f"処理したファイルの数： " + count)
+        end = time.time()
+        elapsed = end - start
+
+        notify.notify_discord(
+            f"予期せぬエラーが発生しました： {e}\n処理したファイルの数：           {count}i\n経過時間：                       {elapsed}秒"
+        )
+
     finally:
         print("全タスク終了。ブラウザを閉じます。")
         driver.quit()
